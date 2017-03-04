@@ -1,0 +1,2 @@
+# extension
+Improved Extension Management
