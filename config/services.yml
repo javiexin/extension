@@ -1,0 +1,34 @@
+services:
+    javiexin.extension.ext.manager:
+        class: javiexin\extension\extension\manager
+        decorates: ext.manager
+        public: false
+        arguments:
+            - '@service_container'
+            - '@dbal.conn'
+            - '@config'
+            - '@filesystem'
+            - '%tables.ext%'
+            - '%core.root_path%'
+            - '%core.php_ext%'
+            - '@cache'
+
+    javiexin.extension.acp.controller:
+        class: javiexin\extension\controller\admin
+        arguments:
+            - '@config'
+            - '@request'
+            - '@template'
+            - '@user'
+            - '@log'
+            - '@dispatcher'
+            - '@ext.manager'
+            - '@javiexin.extension.listener'
+
+    javiexin.extension.listener:
+        class: javiexin\extension\event\listener
+        arguments:
+            - '@request'
+            - '@service_container'
+        tags:
+            - { name: event.listener }
