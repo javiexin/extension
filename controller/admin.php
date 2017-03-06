@@ -89,6 +89,7 @@ class admin
 		$this->page_title = 'ACP_IMP_EXTENSIONS';
 
 		$this->user->add_lang(array('install', 'acp/extensions', 'migrator'));
+		$this->user->add_lang_ext('javiexin/extension', 'extension');
 	}
 
 	public function setup_from_listener($event)
@@ -97,6 +98,8 @@ class admin
 		$this->page_title	= '';  // Will not be considered as not exposed in the event
 		$this->tpl_name		= $event['tpl_name'];
 		$this->u_action		= $event['u_action'];
+
+		$this->user->add_lang_ext('javiexin/extension', 'extension');
 	}
 
 	public function update_event($event)
@@ -258,7 +261,7 @@ class admin
 					'U_ACTION' 				=> $this->u_action,
 				));
 
-				$this->tpl_name = 'acp_ext_list';
+				$this->tpl_name = '@javiexin_extension/acp_ext_list';
 			break;
 
 			case 'enable_pre':
@@ -270,7 +273,7 @@ class admin
 				$this->validate_action($action, $ext_name);
 				$this->perform_action($action, $ext_name, $end_before);
 
-				$this->tpl_name = 'acp_ext_' . str_replace('_pre', '', $action);
+				$this->tpl_name = '@javiexin_extension/acp_ext_action';
 			break;
 
 			case 'details':
@@ -283,7 +286,7 @@ class admin
 					'U_VERSIONCHECK_FORCE'	=> $this->u_action . '&amp;action=details&amp;versioncheck_force=1&amp;ext_name=' . urlencode($ext_name),
 				));
 
-				$this->tpl_name = 'acp_ext_details';
+				$this->tpl_name = '@javiexin_extension/acp_ext_details';
 			break;
 		}
 		return $this->tpl_name; // Used in the listener
@@ -341,12 +344,18 @@ class admin
 		$action = str_replace('_pre', '', $action);
 		$action_name = ($action == 'delete_data') ? 'purge' : $action;
 
+		$this->template->assign_vars(array(
+			'EXTENSION_ACTION'				=> $action,
+			'L_EXTENSION_ACTION_EXPLAIN'	=> $this->user->lang('EXTENSION_' . strtoupper($action) . '_EXPLAIN'),
+		));
+
 		if ($pre)
 		{
 			$this->template->assign_vars(array(
 				'PRE'				=> true,
 				'L_CONFIRM_MESSAGE'	=> $this->user->lang('EXTENSION_' . strtoupper($action) . '_CONFIRM', $this->ext_manager->get_extension_metadata($ext_name, 'display-name')),
-				'U_' . strtoupper($action_name)	=> $this->u_action . '&amp;action=' . $action . '&amp;ext_name=' . urlencode($ext_name) . '&amp;hash=' . generate_link_hash($action . '.' . $ext_name),
+				'L_EXTENSION_ACTION'	=> $this->user->lang('EXTENSION_' . strtoupper($action)),
+				'U_ACTION'				=> $this->u_action . '&amp;action=' . $action . '&amp;ext_name=' . urlencode($ext_name) . '&amp;hash=' . generate_link_hash($action . '.' . $ext_name),
 			));
 		}
 		else
@@ -359,7 +368,10 @@ class admin
 					// Are we approaching the time limit? If so we want to pause the update and continue after refreshing
 					if (time() >= $end_before)
 					{
-						$this->template->assign_var('S_NEXT_STEP', true);
+						$this->template->assign_vars(array(
+							'S_NEXT_STEP'		=> true,
+							'L_EXTENSION_ACTION_IN_PROGRESS'	=> $this->user->lang('EXTENSION_' . strtoupper($action) . '_IN_PROGRESS'),
+						));
 
 						meta_refresh(0, $this->u_action . '&amp;action=' . $action . '&amp;ext_name=' . urlencode($ext_name) . '&amp;hash=' . generate_link_hash($action . '.' . $ext_name));
 					}
@@ -373,6 +385,7 @@ class admin
 
 			$this->template->assign_vars(array(
 				'U_RETURN'	=> $this->u_action . '&amp;action=list',
+				'L_EXTENSION_ACTION_SUCCESS'	=> $this->user->lang('EXTENSION_' . strtoupper($action) . '_SUCCESS'),
 			));
 		}
 	}
