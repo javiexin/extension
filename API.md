@@ -15,6 +15,7 @@ The Improved Extension Metadata Manager extends (ie inherits from) phpBB's Exten
 * The `validate` method now accepts 'enable', 'dir', 'require\_php' and 'require\_phpbb', and calls the corresponding validation function
 * All validation functions now throw exceptions; for functions that returned boolean false, there is a new default parameter to keep backward compatibility when needed
 * The function `output_template_data` now throws an exception; should be removed, but due to inheritance, must be present, but SHOULD NOT be used
+* **NEW 1.0.1**: All validation methods now allow the choice of throwing exceptions or returning boolean false on failure; the default parameter values are per the original behaviour
 
 ## New Improved Extension Manager functionality
 
@@ -46,6 +47,8 @@ but the getter methods for both metadata and extension are still available
 	public function get_extension_metadata($name, $element = 'all')
 ```
 
+* **Update 1.0.1**: metadata validation may throw exceptions or return boolean false on error
+
 ```
 	/**
 	* Validates the metadata element for the extension with the given name
@@ -56,10 +59,11 @@ but the getter methods for both metadata and extension are still available
 	*								'display' for name, type, license, version and authors
 	*								'name', 'type', 'version', 'license' validate that field
 	*								'enable', 'dir', 'authors', 'require_php', 'require_phpbb' validate the corresponding metadata parameter
-	* @return bool 				True if valid, throws an exception if invalid
+	* @param bool $throw_exceptions if true, errors are reported as exceptions, otherwise, return false on error
+	* @return bool 				True if valid, false or throws an exception if invalid
 	* @throws \phpbb\extension\exception
 	*/
-	public function validate_extension_metadata($name, $element = 'display')
+	public function validate_extension_metadata($name, $element = 'display', $throw_exceptions = true)
 ```
 
 ```
@@ -78,10 +82,10 @@ but the getter methods for both metadata and extension are still available
 
 * Metadata for extensions is cached in the Extension Manager, so only (up to) one Metadata Manager is created per extension, saving some file accesses
 * Refactoring of the enable/disable/purge step methods to factor out common code to update the database ext table
-* Changes is_available to validate in the same way that is done for Metadata Manager, and it is made consistent with all_available;
-currently in phpBB is_available and all_available may give different results
-* All state methods are now fully consistent (all_enabled, all_disabled, all_configured, all_available now use is_enabled, is_disabled, is_configured, 
-is_available to generate the lists in a consistent way, no code replication)
+* Changes is\_available to validate in the same way that is done for Metadata Manager, and it is made consistent with all\_available;
+currently in phpBB is\_available and all\_available may give different results
+* All state methods are now fully consistent (all\_enabled, all\_disabled, all\_configured, all\_available now use is\_enabled, is\_disabled, is\_configured, 
+is\_available to generate the lists in a consistent way, no code replication)
 
 ## New Improved ACP Extension functionality
 
@@ -101,8 +105,14 @@ asking the user for a redirection to the new module; if accepted, the new module
 - version check is performed consistently, in a single function;
 - all template variables and blocks are generated directly from the controller
 
+* **NEW 1.0.1**: Refactoring extension related ACP templates (code sharing), now a single template file is used for all actions
+on single or multiple extensions, with significant code reduction and simplification
+* **NEW 1.0.1**: Include functionality to operate on multiple extensions at the same time (multi-enable, disable, delete\_data).
+Allows to select multiple extensions from the extension list, and execute an action on all of them.  Extensions are executed in order.
+No check is (yet) provided to allow only certain extensions for certain actions, but the right choice is validated before the action is executed.
+Limitation: the Improved Extension Mgr cannot be disabled together with any other.
+
 ## Things to do (future functionality)
 
 * Include code to solve or mitigate [**[ticket/15009]** Inconsistency all\_configured all\_available](https://github.com/phpbb/phpbb/pull/4644)
-* Include functionality to operate on multiple extensions at the same time (multi-enable, disable, delete\_data)
-* Refactoring extension related ACP templates (code sharing)
+* Improve visuals and form behaviours in extension list for actions on multiple extensions
