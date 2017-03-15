@@ -11,7 +11,6 @@
 	</fieldset>
 
 	<form id="version_check_settings" method="post" action="{U_ACTION}" style="display:none">
-
 	<fieldset>
 		<legend>{L_EXTENSIONS_VERSION_CHECK_SETTINGS}</legend>
 		<dl>
@@ -31,20 +30,22 @@
 	</fieldset>
 	</form>
 
+	<form id="extension_multi_action" method="post" action="{U_ACTION}">
 	<table class="table1">
-		<col class="row1" ><col class="row1" ><col class="row2" ><col class="row2" >
+		<col class="row1" ><col class="row1" ><col class="row2" ><col class="row2" ><col class="row2">
 	<thead>
 		<tr>
 			<th>{L_EXTENSION_NAME}</th>
 			<th style="text-align: center; width: 20%;">{L_CURRENT_VERSION}</th>
 			<th style="text-align: center; width: 10%;">{L_EXTENSION_OPTIONS}</th>
 			<th style="text-align: center; width: 25%;">{L_EXTENSION_ACTIONS}</th>
+			<th style="text-align: center; width: 3%;"></th>
 		</tr>
 	</thead>
 	<tbody>
 		<!-- IF .enabled -->
 		<tr>
-			<td class="row3" colspan="4"><strong>{L_EXTENSIONS_ENABLED}</strong><!-- EVENT acp_ext_list_enabled_title_after --></td>
+			<td class="row3" colspan="5"><strong>{L_EXTENSIONS_ENABLED}</strong><!-- EVENT acp_ext_list_enabled_title_after --></td>
 		</tr>
 		<!-- BEGIN enabled -->
 		<tr class="ext_enabled row-highlight">
@@ -63,13 +64,16 @@
 					<!-- IF not enabled.actions.S_LAST_ROW -->&nbsp;|&nbsp;<!-- ENDIF -->
 				<!-- END actions -->
 			</td>
+			<td style="text-align: center;">
+				<input type="checkbox" name="ext_list[]" value="{enabled.NAME}">
+			</td>
 		</tr>
 		<!-- END enabled -->
 		<!-- ENDIF -->
 
 		<!-- IF .disabled -->
 		<tr>
-			<td class="row3" colspan="4"><strong>{L_EXTENSIONS_DISABLED}</strong><!-- EVENT acp_ext_list_disabled_title_after --></td>
+			<td class="row3" colspan="5"><strong>{L_EXTENSIONS_DISABLED}</strong><!-- EVENT acp_ext_list_disabled_title_after --></td>
 		</tr>
 		<!-- BEGIN disabled -->
 		<tr class="ext_disabled row-highlight">
@@ -90,11 +94,33 @@
 					<!-- IF not disabled.actions.S_LAST_ROW -->&nbsp;|&nbsp;<!-- ENDIF -->
 				<!-- END actions -->
 			</td>
+			<td style="text-align: center;">
+				<input type="checkbox" name="ext_list[]" value="{disabled.NAME}">
+			</td>
 		</tr>
 		<!-- END disabled -->
 		<!-- ENDIF -->
+		<tr>
+			<td colspan="2"></td>
+			<td colspan="3">
+				<fieldset style="margin: 7px 0px 3px; padding: 7px 10px 3px; font-size: 1.2em;">
+					<legend>{L_IMP_EXTENSIONS_MULTI_ACTIONS}</legend>
+					<p style="float: right;">
+						<button class="button1" type="submit" name="action" value="enable_pre">{L_EXTENSION_ENABLE}</button>&nbsp;
+						<button class="button1" type="submit" name="action" value="disable_pre">{L_EXTENSION_DISABLE}</button>&nbsp;
+						<button class="button1" type="submit" name="action" value="delete_data_pre">{L_EXTENSION_DELETE_DATA}</button>
+					</p>
+					<p style="float: left;">
+						<button class="button2" type="reset" name="reset" value="{L_RESET}">{L_RESET}</button>
+					</p>
+					<input type="hidden" name="multi" value="true" />
+					{S_FORM_TOKEN}
+				</fieldset>
+			</td>
+		</tr>
 	</tbody>
 	</table>
+	</form>
 
 	<table class="table1">
 	<tr>

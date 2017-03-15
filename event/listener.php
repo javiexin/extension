@@ -41,10 +41,32 @@ class listener implements EventSubscriberInterface
 	static public function getSubscribedEvents()
 	{
 		return array(
-			'core.acp_extensions_run_action_before'	=> array('bypass_acp_extension', -123456), // Low priority number, as this listener should run last
+			'core.acp_extensions_run_action_before'	=> array(
+															array('prepare_multi_action', 123456), // High priority number, as this listener should run first
+															array('bypass_acp_extension', -123456), // Low priority number, as this listener should run last
+														),
 			'core.acp_extensions_run_action'		=> array('workaround_acp_extension', 123456), // Workaround for 3.2.0, should run first
 			'core.acp_extensions_run_action_after'	=> array('restore_acp_extension', 123456), // High priority number, as this listener should run first
 		);
+	}
+
+	/**
+	 * Read the request parameters for multi action, and add them to the event
+	 *
+	 * @param \phpbb\event\data	$event	Event object
+	 */
+	public function prepare_multi_action($event)
+	{
+		// If we read from the form, we have both 'multi' and 'ext_list' as an array, if we read from url, we have a comma-separated string
+		$event['ext_list'] = ($this->request->variable('multi', false)) ?
+							$this->request->variable('ext_list', array('')) :
+							explode(',', $this->request->variable('ext_list', ''));
+
+		if (count($event['ext_list']) == 1) // Multi action on a single extension, revert to normal action
+		{
+			$event['ext_name'] = $event['ext_list'][0];
+			$event['ext_list'] = array();
+		}
 	}
 
 	/**
@@ -57,7 +79,7 @@ class listener implements EventSubscriberInterface
 		$controller = $this->container->get('javiexin.extension.acp.controller');
 
 		$controller->setup_from_listener($event);
-		$controller->execute($event['action'], $event['ext_name'], $event['start_time'] + $event['safe_time_limit']);
+		$controller->execute($event['action'], $event['ext_name'], $event['ext_list'], $event['start_time'] + $event['safe_time_limit']);
 		$event = $controller->update_event($event);
 
 		// Save original values for action and ext_name, to be recovered in the next event

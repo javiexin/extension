@@ -130,6 +130,18 @@ class admin
 			trigger_error('FORM_INVALID', E_USER_WARNING);
 		}
 
+		// Multi action from the form sets multi and ext_list as an array, from the url sets ext_list as a comma separated list
+		$ext_list = ($this->request->variable('multi', false)) ?
+							$this->request->variable('ext_list', array('')) :
+							explode(',', $this->request->variable('ext_list', ''));
+
+		// Multi action on a single extension, revert to normal action
+		if (count($ext_list) == 1)
+		{
+			$ext_name = $ext_list[0];
+			$ext_list = array();
+		}
+
 		// As we are in control we do not want to interfere with event execution, so we remove our own subscriber
 		$this->dispatcher->removeSubscriber($this->listener);
 
@@ -140,23 +152,25 @@ class admin
 		* @var	string	action			Action to run; if the event completes execution of the action, should be set to 'none'
 		* @var	string	u_action		Url we are at
 		* @var	string	ext_name		Extension name from request
+		* @var	array	ext_list		List of extensions for multi action -- NON STANDARD (not in the original event)
 		* @var	int		safe_time_limit	Safe limit of execution time
 		* @var	int		start_time		Start time
 		* @var	string	tpl_name		Template file to load
 		* @since 3.1.11-RC1
 		* @changed 3.2.1-RC1			Renamed to core.acp_extensions_run_action_before, added tpl_name, added action 'none'
+		* @changed Improved ext mgr		Included non standard variable ext_list
 		*/
 		$u_action = $this->u_action;
 		$tpl_name = '';
-		$vars = array('action', 'u_action', 'ext_name', 'safe_time_limit', 'start_time', 'tpl_name');
+		$vars = array('action', 'u_action', 'ext_name', 'ext_list', 'safe_time_limit', 'start_time', 'tpl_name');
 		extract($this->dispatcher->trigger_event('core.acp_extensions_run_action_before', compact($vars)));
 
 		// In case they have been updated by the event
 		$this->u_action = $u_action;
 		$this->tpl_name = $tpl_name;
 
-		// Execute the specified action in an extension, before a time limit
-		$this->execute($action, $ext_name, $start_time + $safe_time_limit);
+		// Execute the specified action in an extension (or a list of extensions), before a time limit
+		$this->execute($action, $ext_name, $ext_list, $start_time + $safe_time_limit);
 
 		/**
 		* Event to run after a specific action on extension has completed
@@ -165,14 +179,16 @@ class admin
 		* @var	string	action			Action that has run
 		* @var	string	u_action		Url we are at
 		* @var	string	ext_name		Extension name from request
+		* @var	array	ext_list		List of extensions for multi action -- NON STANDARD (not in the original event)
 		* @var	int		safe_time_limit	Safe limit of execution time
 		* @var	int		start_time		Start time
 		* @var	string	tpl_name		Template file to load
 		* @since 3.1.11-RC1
+		* @changed Improved ext mgr		Included non standard variable ext_list
 		*/
 		$u_action = $this->u_action;
 		$tpl_name = $this->tpl_name;
-		$vars = array('action', 'u_action', 'ext_name', 'safe_time_limit', 'start_time', 'tpl_name');
+		$vars = array('action', 'u_action', 'ext_name', 'ext_list', 'safe_time_limit', 'start_time', 'tpl_name');
 		extract($this->dispatcher->trigger_event('core.acp_extensions_run_action_after', compact($vars)));
 
 		// In case they have been updated by the event
@@ -194,25 +210,12 @@ class admin
 	*
 	* @param string		$action		Action to perform
 	* @param string		$ext_name	Extension name
+	* @param array		$ext_list	Extension list for multi actions
 	* @param int		$end_before	Safe execution time limit
 	* @return string				Template name to use
 	*/
-	public function execute($action, $ext_name, $end_before)
+	public function execute($action, $ext_name, $ext_list, $end_before)
 	{
-		// If they've specified an extension, let's validate it.
-		if ($ext_name)
-		{
-			try
-			{
-				$this->ext_manager->validate_extension_metadata($ext_name);
-			}
-			catch (exception_interface $e)
-			{
-				$message = call_user_func_array(array($this->user, 'lang'), array_merge(array($e->getMessage()), $e->get_parameters()));
-				trigger_error($message . adm_back_link($this->u_action), E_USER_WARNING);
-			}
-		}
-
 		// What are we doing?
 		switch ($action)
 		{
@@ -242,18 +245,13 @@ class admin
 				}
 
 				// Enabled extensions
-				$this->output_list_to_template($this->ext_manager->all_enabled(), 'enabled', array(
-						'DISABLE'		=> $this->u_action . '&amp;action=disable_pre&amp;ext_name=',
-					));
+				$this->output_list_to_template($this->ext_manager->all_enabled(), 'enabled', array('disable'));
+
 				// Disabled extensions
-				$this->output_list_to_template($this->ext_manager->all_disabled(), 'disabled', array(
-						'ENABLE'		=> $this->u_action . '&amp;action=enable_pre&amp;ext_name=',
-						'DELETE_DATA'	=> $this->u_action . '&amp;action=delete_data_pre&amp;ext_name=',
-					));
+				$this->output_list_to_template($this->ext_manager->all_disabled(), 'disabled', array('enable', 'delete_data'));
+
 				// Available not configured extensions
-				$this->output_list_to_template(array_diff_key($this->ext_manager->all_available(), $this->ext_manager->all_configured()), 'disabled', array(
-						'ENABLE'		=> $this->u_action . '&amp;action=enable_pre&amp;ext_name=',
-					));
+				$this->output_list_to_template(array_diff_key($this->ext_manager->all_available(), $this->ext_manager->all_configured()), 'disabled', array('enable'));
 
 				$this->template->assign_vars(array(
 					'U_VERSIONCHECK_FORCE' 	=> $this->u_action . '&amp;action=list&amp;versioncheck_force=1',
@@ -270,13 +268,29 @@ class admin
 			case 'enable':
 			case 'disable':
 			case 'delete_data':
-				$this->validate_action($action, $ext_name);
+				if ($ext_list)
+				{
+					$this->user->add_lang_ext('javiexin/extension', 'multi'); // This overwrites some core language vars with "multi" variants
+
+					$this->validate_multi_action($action, $ext_list);
+					$ext_name = $this->select_extension_for_multi_action($action, $ext_list);
+					$this->u_action .= '&amp;ext_list=' . urlencode(implode(',', $ext_list));
+				}
+				if ($ext_name)
+				{
+					$this->validate_action($action, $ext_name);
+				}
 				$this->perform_action($action, $ext_name, $end_before);
+				if ($ext_list && $ext_name)
+				{
+					$this->perform_multi_action_after($action, $ext_name, $ext_list);
+				}
 
 				$this->tpl_name = '@javiexin_extension/acp_ext_action';
 			break;
 
 			case 'details':
+				$this->validate_action($action, $ext_name);
 				// Output it to the template
 				$this->output_metadata_to_template($ext_name);
 				$this->output_versioncheck_to_template($ext_name);
@@ -289,7 +303,29 @@ class admin
 				$this->tpl_name = '@javiexin_extension/acp_ext_details';
 			break;
 		}
-		return $this->tpl_name; // Used in the listener
+	}
+
+	/**
+	* Validation before acting on an extension list
+	*
+	* @param string		$action		Action to perform
+	* @param array		$ext_list	List of extension names
+	* @return null
+	*/
+	protected function validate_multi_action($action, $ext_list)
+	{
+		$unavailable = array();
+		foreach ($ext_list as $ext_name)
+		{
+			if (!$this->ext_manager->is_available($ext_name))
+			{
+				$unavailable[] = $ext_name;
+			}
+		}
+		if (!empty($unavailable))
+		{
+			trigger_error($this->user->lang('EXTENSIONS_NOT_AVAILABLE', count($unavailable)) . $this->to_html_string($unavailable) . adm_back_link($this->u_action), E_USER_WARNING);
+		}
 	}
 
 	/**
@@ -303,31 +339,64 @@ class admin
 	{
 		$action = str_replace('_pre', '', $action);
 
-		if ($this->ext_manager->is_enabled($ext_name) == in_array($action, array('enable', 'delete_data')))
+		try
 		{
-			redirect($this->u_action);
-		}
-
-		if (in_array($action, array('enable', 'delete_data')))
-		{
-			try
+			$this->ext_manager->validate_extension_metadata($ext_name);
+			if (in_array($action, array('enable', 'delete_data')))
 			{
+				if ($this->ext_manager->is_enabled($ext_name))
+				{
+					redirect($this->u_action);
+				}
 				$this->ext_manager->validate_extension_metadata($ext_name, 'enable');
 			}
-			catch (exception_interface $e)
+			else if ($action === 'disable')
 			{
-				$message = call_user_func_array(array($this->user, 'lang'), array_merge(array($e->getMessage()), $e->get_parameters()));
-				trigger_error($message . adm_back_link($this->u_action), E_USER_WARNING);
+				if (!$this->ext_manager->is_enabled($ext_name))
+				{
+					redirect($this->u_action);
+				}
 			}
+		}
+		catch (exception_interface $e)
+		{
+			$message = call_user_func_array(array($this->user, 'lang'), array_merge(array($e->getMessage()), $e->get_parameters()));
+			trigger_error($message . adm_back_link($this->u_action), E_USER_WARNING);
 		}
 
-		if ($action === 'enable')
+		if ($action === 'enable' && !$this->ext_manager->is_enableable($ext_name))
 		{
-			if (!$this->ext_manager->is_enableable($ext_name))
+			trigger_error($this->user->lang['EXTENSION_NOT_ENABLEABLE'] . adm_back_link($this->u_action), E_USER_WARNING);
+		}
+	}
+
+	/**
+	* Select the next extension to act on from the given list
+	*
+	* @param string		$action		Action to perform
+	* @param array		$ext_list	List of extension names
+	* @return string		empty if action is completed, or the name of the extension to use to continue action
+	*/
+	protected function select_extension_for_multi_action($action, $ext_list)
+	{
+		if (substr($action, -4) === '_pre')
+		{
+			return '';
+		}
+
+		$action_name = ($action == 'delete_data') ? 'purge' : $action;
+		$check_done = 'is_' . $action_name . 'd';
+
+		$this->template->assign_block_vars_array('ext', $this->ext_list_data($ext_list, $check_done));
+
+		foreach ($ext_list as $ext_name)
+		{
+			if (!$this->ext_manager->$check_done($ext_name))
 			{
-				trigger_error($this->user->lang['EXTENSION_NOT_ENABLEABLE'] . adm_back_link($this->u_action), E_USER_WARNING);
+				break;
 			}
 		}
+		return $ext_name;
 	}
 
 	/**
@@ -345,20 +414,22 @@ class admin
 		$action_name = ($action == 'delete_data') ? 'purge' : $action;
 
 		$this->template->assign_vars(array(
-			'EXTENSION_ACTION'				=> $action,
-			'L_EXTENSION_ACTION_EXPLAIN'	=> $this->user->lang('EXTENSION_' . strtoupper($action) . '_EXPLAIN'),
+			'EXTENSION_ACTION'					=> $action,
+			'L_EXTENSION_ACTION'				=> $this->user->lang('EXTENSION_' . strtoupper($action)),
+			'L_EXTENSION_ACTION_EXPLAIN'		=> $this->user->lang('EXTENSION_' . strtoupper($action) . '_EXPLAIN'),
+			'L_EXTENSION_ACTION_CONFIRM'		=> $this->user->lang('EXTENSION_' . strtoupper($action) . '_CONFIRM', ($ext_name) ? $this->ext_manager->get_extension_metadata($ext_name, 'display-name') : ''),
+			'L_EXTENSION_ACTION_IN_PROGRESS'	=> $this->user->lang('EXTENSION_' . strtoupper($action) . '_IN_PROGRESS'),
+			'L_EXTENSION_ACTION_SUCCESS'		=> $this->user->lang('EXTENSION_' . strtoupper($action) . '_SUCCESS'),
 		));
 
 		if ($pre)
 		{
 			$this->template->assign_vars(array(
-				'PRE'				=> true,
-				'L_CONFIRM_MESSAGE'	=> $this->user->lang('EXTENSION_' . strtoupper($action) . '_CONFIRM', $this->ext_manager->get_extension_metadata($ext_name, 'display-name')),
-				'L_EXTENSION_ACTION'	=> $this->user->lang('EXTENSION_' . strtoupper($action)),
+				'PRE'					=> true,
 				'U_ACTION'				=> $this->u_action . '&amp;action=' . $action . '&amp;ext_name=' . urlencode($ext_name) . '&amp;hash=' . generate_link_hash($action . '.' . $ext_name),
 			));
 		}
-		else
+		else if ($ext_name)
 		{
 			$action_step = $action_name . '_step';
 			try
@@ -370,7 +441,6 @@ class admin
 					{
 						$this->template->assign_vars(array(
 							'S_NEXT_STEP'		=> true,
-							'L_EXTENSION_ACTION_IN_PROGRESS'	=> $this->user->lang('EXTENSION_' . strtoupper($action) . '_IN_PROGRESS'),
 						));
 
 						meta_refresh(0, $this->u_action . '&amp;action=' . $action . '&amp;ext_name=' . urlencode($ext_name) . '&amp;hash=' . generate_link_hash($action . '.' . $ext_name));
@@ -384,10 +454,40 @@ class admin
 			}
 
 			$this->template->assign_vars(array(
-				'U_RETURN'	=> $this->u_action . '&amp;action=list',
-				'L_EXTENSION_ACTION_SUCCESS'	=> $this->user->lang('EXTENSION_' . strtoupper($action) . '_SUCCESS'),
+				'U_RETURN'						=> $this->u_action . '&amp;action=list',
 			));
 		}
+	}
+
+	/**
+	* Perform action on an extension list after actual action
+	*
+	* @param string		$action		Action being performed
+	* @param array		$ext_name	Name of extension that has been acted on
+	* @param array		$ext_list	List of extension names
+	* @return null
+	*/
+	protected function perform_multi_action_after($action, $ext_name, $ext_list)
+	{
+		$action_name = ($action == 'delete_data') ? 'purge' : $action;
+		$check_done = 'is_' . $action_name . 'd';
+
+		$this->template->alter_block_array('ext', array('S_DONE' => true), array('NAME' => $ext_name), 'change');
+
+		foreach ($ext_list as $name)
+		{
+			if (!$this->ext_manager->$check_done($name))
+			{
+				$this->template->assign_vars(array(
+					'S_NEXT_STEP'						=> true,
+				));
+				meta_refresh(0, $this->u_action . '&amp;action=' . $action . '&amp;hash=' . generate_link_hash($action . '.'));
+			}
+		}
+
+		$this->template->assign_vars(array(
+			'U_RETURN'							=> preg_replace('/&(amp;)?(ext_list)=[^&]*/', '', $this->u_action) . '&amp;action=list',
+		));
 	}
 
 	/**
@@ -480,12 +580,12 @@ class admin
 	*/
 	protected function output_actions($block, $name, $actions)
 	{
-		foreach ($actions as $lang => $url)
+		foreach ($actions as $action)
 		{
 			$this->template->assign_block_vars($block . '.actions', array(
-				'L_ACTION'			=> $this->user->lang('EXTENSION_' . $lang),
-				'L_ACTION_EXPLAIN'	=> (isset($this->user->lang['EXTENSION_' . $lang . '_EXPLAIN'])) ? $this->user->lang('EXTENSION_' . $lang . '_EXPLAIN') : '',
-				'U_ACTION'			=> $url . urlencode($name),
+				'L_ACTION'			=> $this->user->lang('EXTENSION_' . strtoupper($action)),
+				'L_ACTION_EXPLAIN'	=> (isset($this->user->lang['EXTENSION_' . strtoupper($action) . '_EXPLAIN'])) ? $this->user->lang('EXTENSION_' . strtoupper($action) . '_EXPLAIN') : '',
+				'U_ACTION'			=> $this->u_action . '&amp;action=' . $action . '_pre&amp;ext_name=' . urlencode($name),
 			));
 		}
 	}
@@ -570,5 +670,47 @@ class admin
 				'VERSIONCHECK_FAIL_REASON'	=> ($e->getMessage() !== 'VERSIONCHECK_FAIL') ? $message : '',
 			));
 		}
+	}
+
+	/**
+	 * Converts an array of extensions into a single HTML string for displaying
+	 *
+	 * @param array	$ext_list	List of extensions
+	 * @return string			The HTML string with the list of extensions
+	 */
+	protected function to_html_string($ext_list)
+	{
+		$html_string = '';
+		foreach($ext_list as $ext_name)
+		{
+			$html_string .= '<br/>';
+			$html_string .= $this->ext_manager->get_extension_metadata($ext_name, 'display-name');
+		}
+		return $html_string;
+	}
+
+	/**
+	 * Generate extension list template array
+	 * Given an array of extension names, returns an array of template data for each extension
+	 * The returned array is suitable to be used by assign_block_vars_array
+	 *
+	 * @param array		$ext_list	Extension list
+	 * @param string	$check_done	Name of method to check if action is completed
+	 * @return array				Array of arrays of template data, one entry per extension in the list
+	 */
+	protected function ext_list_data($ext_list, $check_done)
+	{
+		$ext_list_data = array();
+		foreach($ext_list as $ext_name)
+		{
+			$ext_list_data[] = array(
+										'NAME'			=> $ext_name,
+										'DISPLAY_NAME'	=> $this->ext_manager->get_extension_metadata($ext_name, 'display-name'),
+										'VERSION'		=> $this->ext_manager->get_extension_metadata($ext_name, 'version'),
+										'S_DONE'		=> $this->ext_manager->$check_done($ext_name),
+										'U_DETAILS'		=> $u_action . '&amp;action=details&amp;ext_name=' . urlencode($ext_name),
+									);
+		}
+		return $ext_list_data;
 	}
 }
