@@ -51,6 +51,7 @@ class metadata_manager extends \phpbb\extension\metadata_manager
 			'license'	=> '#.+#',
 			'version'	=> '#.+#',
 		);
+
 		// Load the file and capture any error without throwing the exception yet
 		$this->load_exception = false;
 
@@ -122,58 +123,70 @@ class metadata_manager extends \phpbb\extension\metadata_manager
 	* @param string $name  ("all" for display and enable validation
 	* 						"display" for name, type, and authors
 	* 						"name", "type")
-	* @return Bool True if valid, throws an exception if invalid
+	* @param bool $throw_exceptions if true, errors are reported as exceptions, otherwise, return false on error
+	*								provided for backward compatibility with this default value
+	* @return bool True if validation succeeded, false or throws an exception if invalid
 	* @throws \phpbb\extension\exception
 	*/
-	public function validate($name = 'display')
+	public function validate($name = 'display', $throw_exceptions = true)
 	{
-		// Throw exceptions caught during initialization
-		if ($this->load_exception)
+		try
 		{
-			throw new \phpbb\extension\exception($this->load_exception, array($this->metadata_file));
+			// Throw exceptions caught during initialization
+			if ($this->load_exception)
+			{
+				throw new \phpbb\extension\exception($this->load_exception, array($this->metadata_file));
+			}
+
+			switch ($name)
+			{
+				case 'all':
+					$this->validate('display');
+					$this->validate_enable(true);
+				break;
+
+				case 'display':
+					foreach ($this->fields as $field => $data)
+					{
+						$this->validate($field);
+					}
+				// No break
+
+				case 'authors':
+					return $this->validate_authors();
+				break;
+
+				// Proxy for other validation methods
+				case 'enable':
+				case 'dir':
+				case 'require_php':
+				case 'require_phpbb':
+					return $this->{'validate_' . $name}(true);
+				break;
+
+				default:
+					if (isset($this->fields[$name]))
+					{
+						if (!isset($this->metadata[$name]))
+						{
+							throw new \phpbb\extension\exception('META_FIELD_NOT_SET', array($name));
+						}
+
+						if (!preg_match($this->fields[$name], $this->metadata[$name]))
+						{
+							throw new \phpbb\extension\exception('META_FIELD_INVALID', array($name));
+						}
+					}
+				break;
+			}
 		}
-
-		switch ($name)
+		catch (\phpbb\extension\exception $e)
 		{
-			case 'all':
-				$this->validate('display');
-
-				$this->validate_enable(true);
-			break;
-
-			case 'display':
-				foreach ($this->fields as $field => $data)
-				{
-					$this->validate($field);
-				}
-			// No break
-
-			case 'authors':
-				$this->validate_authors();
-			break;
-
-			// Proxy for other validation methods
-			case 'enable':
-			case 'dir':
-			case 'require_php':
-			case 'require_phpbb':
-				$this->{'validate_' . $name}(true);
-			break;
-
-			default:
-				if (isset($this->fields[$name]))
-				{
-					if (!isset($this->metadata[$name]))
-					{
-						throw new \phpbb\extension\exception('META_FIELD_NOT_SET', array($name));
-					}
-
-					if (!preg_match($this->fields[$name], $this->metadata[$name]))
-					{
-						throw new \phpbb\extension\exception('META_FIELD_INVALID', array($name));
-					}
-				}
-			break;
+			if ($throw_exceptions)
+			{
+				throw $e;
+			}
+			return false;
 		}
 
 		return true;
@@ -182,21 +195,31 @@ class metadata_manager extends \phpbb\extension\metadata_manager
 	/**
 	* Validates the contents of the authors field
 	*
-	* @return boolean True when passes validation, throws exception if invalid
+	* @param bool $throw_exceptions if true, errors are reported as exceptions, otherwise, return false on error
+	*								provided for backward compatibility with this default value
+	* @return bool True if validation succeeded, false or throws an exception if invalid
 	* @throws \phpbb\extension\exception
 	*/
-	public function validate_authors()
+	public function validate_authors($throw_exceptions = true)
 	{
 		if (empty($this->metadata['authors']))
 		{
-			throw new \phpbb\extension\exception('META_FIELD_NOT_SET', array('authors'));
+			if ($throw_exceptions)
+			{
+				throw new \phpbb\extension\exception('META_FIELD_NOT_SET', array('authors'));
+			}
+			return false;
 		}
 
 		foreach ($this->metadata['authors'] as $author)
 		{
 			if (!isset($author['name']))
 			{
-				throw new \phpbb\extension\exception('META_FIELD_NOT_SET', array('author name'));
+				if ($throw_exceptions)
+				{
+					throw new \phpbb\extension\exception('META_FIELD_NOT_SET', array('author name'));
+				}
+				return false;
 			}
 		}
 
@@ -207,7 +230,7 @@ class metadata_manager extends \phpbb\extension\metadata_manager
 	* This array handles the verification that this extension can be enabled on this board
 	*
 	* @param bool $throw_exceptions if true, errors are reported as exceptions, otherwise, return false on error
-	*								provided for backward compatibility with this default value, should use exceptions always
+	*								provided for backward compatibility with this default value
 	* @return bool True if validation succeeded, false or throws an exception if invalid
 	* @throws \phpbb\extension\exception
 	*/
@@ -221,7 +244,7 @@ class metadata_manager extends \phpbb\extension\metadata_manager
 	* Validates the most basic directory structure to ensure it follows <vendor>/<ext> convention.
 	*
 	* @param bool $throw_exceptions if true, errors are reported as exceptions, otherwise, return false on error
-	*								provided for backward compatibility with this default value, should use exceptions always
+	*								provided for backward compatibility with this default value
 	* @return boolean True when passes validation, false or throws an exception if invalid
 	* @throws \phpbb\extension\exception
 	*/
@@ -237,12 +260,11 @@ class metadata_manager extends \phpbb\extension\metadata_manager
 		return $is_valid_dir;
 	}
 
-
 	/**
 	* Validates the contents of the phpbb requirement field
 	*
 	* @param bool $throw_exceptions if true, errors are reported as exceptions, otherwise, return false on error
-	*								provided for backward compatibility with this default value, should use exceptions always
+	*								provided for backward compatibility with this default value
 	* @return boolean True when passes validation, false or throws an exception if invalid
 	* @throws \phpbb\extension\exception
 	*/
@@ -262,7 +284,7 @@ class metadata_manager extends \phpbb\extension\metadata_manager
 	* Validates the contents of the php requirement field
 	*
 	* @param bool $throw_exceptions if true, errors are reported as exceptions, otherwise, return false on error
-	*								provided for backward compatibility with this default value, should use exceptions always
+	*								provided for backward compatibility with this default value
 	* @return boolean True when passes validation, false or throws an exception if invalid
 	* @throws \phpbb\extension\exception
 	*/

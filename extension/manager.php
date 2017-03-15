@@ -115,12 +115,13 @@ class manager extends \phpbb\extension\manager
 	*								'display' for name, type, license, version and authors
 	*								'name', 'type', 'version', 'license' validate that field
 	*								'enable', 'dir', 'authors', 'require_php', 'require_phpbb' validate the corresponding metadata parameter
-	* @return bool 				True if valid, throws an exception if invalid
+	* @param bool $throw_exceptions if true, errors are reported as exceptions, otherwise, return false on error
+	* @return bool 				True if valid, false or throws an exception if invalid
 	* @throws \phpbb\extension\exception
 	*/
-	public function validate_extension_metadata($name, $element = 'display')
+	public function validate_extension_metadata($name, $element = 'display', $throw_exceptions = true)
 	{
-		return $this->get_extension_metadata_manager($name)->validate($element);
+		return $this->get_extension_metadata_manager($name)->validate($element, $throw_exceptions);
 	}
 
 	/**
