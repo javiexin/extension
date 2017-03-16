@@ -11,7 +11,9 @@ It replaces the core extension management service with these improved services, 
 
 **NEW 1.0.1**: Possibility to perform action on multiple extensions at once.
 
-See [API.md](API.md) for a description of the new object methods and changes (_Updated to 1.0.1_).
+**NEW 1.0.2**: Minor bug fixes on multi actions.
+
+See [API.md](API.md) for a description of the new object methods and changes (_Updated to 1.0.2_).
 
 See [CORE.md](CORE.md) for a list of proposed core changes included here.
 

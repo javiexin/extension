@@ -57,23 +57,13 @@ class listener implements EventSubscriberInterface
 	 */
 	public function prepare_multi_action($event)
 	{
-		// If we read from the form, we have both 'multi' and 'ext_list' as an array, if we read from url, we have a comma-separated string
-		$ext_list = ($this->request->variable('multi', false)) ?
-							$this->request->variable('ext_list', array('')) :
-							explode(',', $this->request->variable('ext_list', ''));
+		$ext_name = $event['ext_name'];
 
-		// If this extension has been specified for multi action, we remove it
-		if (in_array('javiexin/extension', $ext_list))
-		{
-			$ext_list = array_values(array_merge(array_diff($ext_list, array('javiexin/extension')), array('javiexin/extension')));
-		}
+		$controller = $this->container->get('javiexin.extension.acp.controller');
+		// Get the list of extensions for multi actions; may set ext_name
+		$ext_list = $controller->prepare_multi_action($ext_name);
 
-		// Multi action on a single extension, revert to normal action
-		if (count($ext_list) == 1)
-		{
-			$event['ext_name'] = ($ext_list[0]) ? $ext_list[0] : $event['ext_name'];
-			$ext_list = array();
-		}
+		$event['ext_name'] = $ext_name;
 		$event['ext_list'] = $ext_list;
 	}
 

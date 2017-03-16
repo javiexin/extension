@@ -111,6 +111,8 @@ on single or multiple extensions, with significant code reduction and simplifica
 Allows to select multiple extensions from the extension list, and execute an action on all of them.  Extensions are executed in order.
 No check is (yet) provided to allow only certain extensions for certain actions, but the right choice is validated before the action is executed.
 Limitation: the Improved Extension Mgr cannot be disabled together with any other.
+* **Update 1.0.2**: The Improved Extension Mgr may be disabled in a multi action; it is done last to avoid crash.
+Trying to use multi action on an empty list now triggers an error. Minor bug fixes.
 
 ## Things to do (future functionality)
 

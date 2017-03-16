@@ -130,23 +130,8 @@ class admin
 			trigger_error('FORM_INVALID', E_USER_WARNING);
 		}
 
-		// Multi action from the form sets multi and ext_list as an array, from the url sets ext_list as a comma separated list
-		$ext_list = ($this->request->variable('multi', false)) ?
-							$this->request->variable('ext_list', array('')) :
-							explode(',', $this->request->variable('ext_list', ''));
-
-		// If this extension has been specified for multi action, we remove it
-		if (in_array('javiexin/extension', $ext_list))
-		{
-			$ext_list = array_values(array_merge(array_diff($ext_list, array('javiexin/extension')), array('javiexin/extension')));
-		}
-
-		// Multi action on a single extension, revert to normal action
-		if (count($ext_list) == 1)
-		{
-			$ext_name = ($ext_list[0]) ? $ext_list[0] : $ext_name;
-			$ext_list = array();
-		}
+		// Get the list of extensions for multi actions; may set ext_name
+		$ext_list = $this->prepare_multi_action($ext_name);
 
 		// As we are in control we do not want to interfere with event execution, so we remove our own subscriber
 		$this->dispatcher->removeSubscriber($this->listener);
@@ -212,13 +197,51 @@ class admin
 	}
 
 	/**
+	 * Prepare for multi action, reading the request parameters
+	 *
+	 * @param string	$ext_name	Reference to extension name, may be modified here
+	 * @return array				Extension list for multi actions
+	 */
+	public function prepare_multi_action(&$ext_name)
+	{
+		// Multi action from the form sets multi and ext_list as an array, from the url sets ext_list as a comma separated string
+		$ext_list = ($this->request->variable('multi', false)) ?
+							$this->request->variable('ext_list', array('')) :
+							explode(',', $this->request->variable('ext_list', ''));
+
+		// List is empty
+		$ext_list = ($ext_list === array('')) ? array() : $ext_list;
+
+		// Multi action on a single extension, revert to normal action
+		if (count($ext_list) == 1)
+		{
+			$ext_name = $ext_list[0];
+			$ext_list = array();
+		}
+
+		// Do not allow actions without target extension(s)
+		if (in_array($action, array('enable_pre', 'disable_pre', 'delete_data_pre')) && empty($ext_name) && empty($ext_list))
+		{
+			trigger_error('FORM_INVALID', E_USER_WARNING);
+		}
+
+		// If this extension has been specified for multi action, we make it last
+		if (in_array('javiexin/extension', $ext_list))
+		{
+			$ext_list = array_values(array_merge(array_diff($ext_list, array('javiexin/extension')), array('javiexin/extension')));
+		}
+
+		return $ext_list;
+	}
+
+	/**
 	* Execute specified action
 	*
 	* @param string		$action		Action to perform
 	* @param string		$ext_name	Extension name
 	* @param array		$ext_list	Extension list for multi actions
 	* @param int		$end_before	Safe execution time limit
-	* @return string				Template name to use
+	* @return null
 	*/
 	public function execute($action, $ext_name, $ext_list, $end_before)
 	{
@@ -282,12 +305,9 @@ class admin
 					$ext_name = $this->select_extension_for_multi_action($action, $ext_list);
 					$this->u_action .= '&amp;ext_list=' . urlencode(implode(',', $ext_list));
 				}
-				if ($ext_name)
-				{
-					$this->validate_action($action, $ext_name);
-				}
+				$this->validate_action($action, $ext_name);
 				$this->perform_action($action, $ext_name, $end_before);
-				if ($ext_list && $ext_name)
+				if ($ext_list)
 				{
 					$this->perform_multi_action_after($action, $ext_name, $ext_list);
 				}
@@ -381,21 +401,15 @@ class admin
 	*
 	* @param string		$action		Action to perform
 	* @param array		$ext_list	List of extension names
-	* @return string		empty if action is completed, or the name of the extension to use to continue action
+	* @return string		the name of the extension to use to continue action
 	*/
 	protected function select_extension_for_multi_action($action, $ext_list)
 	{
-		$pre = substr($action, -4) === '_pre';
 		$action = str_replace('_pre', '', $action);
 		$action_name = ($action == 'delete_data') ? 'purge' : $action;
 		$check_done = 'is_' . $action_name . 'd';
 
 		$this->template->assign_block_vars_array('ext', $this->ext_list_data($ext_list, $check_done));
-
-		if ($pre)
-		{
-			return '';
-		}
 
 		foreach ($ext_list as $ext_name)
 		{
@@ -437,7 +451,7 @@ class admin
 				'U_ACTION'				=> $this->u_action . '&amp;action=' . $action . '&amp;ext_name=' . urlencode($ext_name) . '&amp;hash=' . generate_link_hash($action . '.' . $ext_name),
 			));
 		}
-		else if ($ext_name)
+		else
 		{
 			$action_step = $action_name . '_step';
 			try
@@ -477,6 +491,10 @@ class admin
 	*/
 	protected function perform_multi_action_after($action, $ext_name, $ext_list)
 	{
+		if (substr($action, -4) === '_pre')
+		{
+			return;
+		}
 		$action_name = ($action == 'delete_data') ? 'purge' : $action;
 		$check_done = 'is_' . $action_name . 'd';
 
@@ -716,7 +734,7 @@ class admin
 										'DISPLAY_NAME'	=> $this->ext_manager->get_extension_metadata($ext_name, 'display-name'),
 										'VERSION'		=> $this->ext_manager->get_extension_metadata($ext_name, 'version'),
 										'S_DONE'		=> $this->ext_manager->$check_done($ext_name),
-										'U_DETAILS'		=> $u_action . '&amp;action=details&amp;ext_name=' . urlencode($ext_name),
+										'U_DETAILS'		=> $this->u_action . '&amp;action=details&amp;ext_name=' . urlencode($ext_name),
 									);
 		}
 		return $ext_list_data;

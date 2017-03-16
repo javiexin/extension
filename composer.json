@@ -3,8 +3,8 @@
     "type": "phpbb-extension",
     "description": "Improves the core extension and metadata managers and the ACP module",
     "homepage": "",
-    "version": "1.0.1-dev",
-    "time": "2017-03-15",
+    "version": "1.0.2-dev",
+    "time": "2017-03-17",
     "license": "GPL-2.0",
     "authors": [
         {
