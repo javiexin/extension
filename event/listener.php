@@ -64,7 +64,7 @@ class listener implements EventSubscriberInterface
 
 		if (count($event['ext_list']) == 1) // Multi action on a single extension, revert to normal action
 		{
-			$event['ext_name'] = $event['ext_list'][0];
+			$event['ext_name'] = ($event['ext_list'][0]) ? $event['ext_list'][0] : $event['ext_name'];
 			$event['ext_list'] = array();
 		}
 	}

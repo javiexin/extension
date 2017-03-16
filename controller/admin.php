@@ -141,7 +141,7 @@ class admin
 		// Multi action on a single extension, revert to normal action
 		if (count($ext_list) == 1)
 		{
-			$ext_name = $ext_list[0];
+			$ext_name = ($ext_list[0]) ? $ext_list[0] : $ext_name;
 			$ext_list = array();
 		}
 
@@ -382,15 +382,17 @@ class admin
 	*/
 	protected function select_extension_for_multi_action($action, $ext_list)
 	{
-		if (substr($action, -4) === '_pre')
-		{
-			return '';
-		}
-
+		$pre = substr($action, -4) === '_pre';
+		$action = str_replace('_pre', '', $action);
 		$action_name = ($action == 'delete_data') ? 'purge' : $action;
 		$check_done = 'is_' . $action_name . 'd';
 
 		$this->template->assign_block_vars_array('ext', $this->ext_list_data($ext_list, $check_done));
+
+		if ($pre)
+		{
+			return '';
+		}
 
 		foreach ($ext_list as $ext_name)
 		{
@@ -457,7 +459,7 @@ class admin
 			}
 
 			$this->template->assign_vars(array(
-				'U_RETURN'						=> $this->u_action . '&amp;action=list',
+				'U_RETURN' => $this->u_action . '&amp;action=list',
 			));
 		}
 	}
@@ -489,7 +491,7 @@ class admin
 		}
 
 		$this->template->assign_vars(array(
-			'U_RETURN'							=> preg_replace('/&(amp;)?(ext_list)=[^&]*/', '', $this->u_action) . '&amp;action=list',
+			'U_RETURN' => preg_replace('/&(amp;)?(ext_list)=[^&]*/', '', $this->u_action) . '&amp;action=list',
 		));
 	}
 
