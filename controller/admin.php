@@ -136,7 +136,10 @@ class admin
 							explode(',', $this->request->variable('ext_list', ''));
 
 		// If this extension has been specified for multi action, we remove it
-		$ext_list = array_diff($ext_list, array('javiexin/extension'));
+		if (in_array('javiexin/extension', $ext_list))
+		{
+			$ext_list = array_values(array_merge(array_diff($ext_list, array('javiexin/extension')), array('javiexin/extension')));
+		}
 
 		// Multi action on a single extension, revert to normal action
 		if (count($ext_list) == 1)
