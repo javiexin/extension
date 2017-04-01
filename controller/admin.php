@@ -630,7 +630,7 @@ class admin
 	* @param string $ext_name Name of the extension to get the metadata
 	* @return null
 	*/
-	protected function output_metadata_to_template($ext_name)
+	public function output_metadata_to_template($ext_name)
 	{
 		$metadata = $this->ext_manager->get_extension_metadata($ext_name);
 

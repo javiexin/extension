@@ -309,6 +309,9 @@ class metadata_manager extends \phpbb\extension\metadata_manager
 	*/
 	public function output_template_data(\phpbb\template\template $template)
 	{
-		throw new \phpbb\extension\exception('EXTENSION_NOT_AVAILABLE');
+		global $phpbb_container;
+		$controller = $phpbb_container->get('javiexin.extension.acp.controller');
+		$controller->output_metadata_to_template($this->ext_name);
+//		throw new \phpbb\extension\exception('EXTENSION_NOT_AVAILABLE');
 	}
 }
