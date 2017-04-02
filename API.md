@@ -87,6 +87,38 @@ currently in phpBB is\_available and all\_available may give different results
 * All state methods are now fully consistent (all\_enabled, all\_disabled, all\_configured, all\_available now use is\_enabled, is\_disabled, is\_configured, 
 is\_available to generate the lists in a consistent way, no code replication)
 
+* **NEW 1.0.3**: Added methods to check if an action is doable in an extension (depending on its current state)
+
+```
+	/**
+	* Check to see if a given extension is available for enablement
+	*
+	* @param string $name Extension name to check
+	* @return bool
+	*/
+	public function check_enableable($name)
+```
+
+```
+	/**
+	* Check to see if a given extension is available for disablement
+	*
+	* @param string $name Extension name to check
+	* @return bool
+	*/
+	public function check_disableable($name)
+```
+
+```
+	/**
+	* Check to see if a given extension is available for purging
+	*
+	* @param string $name Extension name to check
+	* @return bool
+	*/
+	public function check_purgeable($name)
+```
+
 ## New Improved ACP Extension functionality
 
 The Improved ACP Extension module replaces phpBB's ACP Extension module.  This is done in a 100% compatible way, keeping exactly all the functionality.
