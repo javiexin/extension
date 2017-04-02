@@ -132,10 +132,10 @@ asking the user for a redirection to the new module; if accepted, the new module
 * The controller may be initialized either from the specific ACP module or from the event listener (3.2.1 onwards)
 
 * Full refactoring of the ACP module, to avoid code duplication and for consistency: 
-- enable/disable/delete\_data share most code; 
-- lists of extensions are generated with the same function;
-- version check is performed consistently, in a single function;
-- all template variables and blocks are generated directly from the controller
+	- enable/disable/delete\_data share most code; 
+	- lists of extensions are generated with the same function;
+	- version check is performed consistently, in a single function;
+	- all template variables and blocks are generated directly from the controller
 
 * **NEW 1.0.1**: Refactoring extension related ACP templates (code sharing), now a single template file is used for all actions
 on single or multiple extensions, with significant code reduction and simplification
@@ -146,9 +146,9 @@ Allows to select multiple extensions from the extension list, and execute an act
 * **Update 1.0.2**: The Improved Extension Mgr may be disabled in a multi action; it is done last to avoid crash.
 Trying to use multi action on an empty list now triggers an error. Minor bug fixes.
 * **NEW 1.0.3**: Improve visuals and form behaviours in extension list for actions on multiple extensions:
-- alow selecting all extensions that support an specific action
-- enable only the multi-actions that are relevant for the selected extensions
-- out of the selected extensions, only those supporting an specific action are taken into consideration when executing multi-action
+	- allow selecting all extensions that support an specific action
+	- enable only the multi-actions that are relevant for the selected extensions
+	- out of the selected extensions, only those supporting an specific action are taken into consideration when executing multi-action
 
 ## Things to do (future functionality)
 
