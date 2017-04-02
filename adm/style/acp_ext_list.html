@@ -36,7 +36,7 @@
 	<thead>
 		<tr>
 			<th>{L_EXTENSION_NAME}</th>
-			<th style="text-align: center; width: 20%;">{L_CURRENT_VERSION}</th>
+			<th style="text-align: center; width: 15%;">{L_CURRENT_VERSION}</th>
 			<th style="text-align: center; width: 10%;">{L_EXTENSION_OPTIONS}</th>
 			<th style="text-align: center; width: 25%;">{L_EXTENSION_ACTIONS}</th>
 			<th style="text-align: center; width: 3%;"></th>
@@ -65,7 +65,7 @@
 				<!-- END actions -->
 			</td>
 			<td style="text-align: center;">
-				<input type="checkbox" name="ext_list[]" value="{enabled.NAME}">
+				<input type="checkbox" name="ext_list[]" value="{enabled.NAME}"<!-- IF enabled.EXT_ACTIONS --> ext-actions="{enabled.EXT_ACTIONS}" onchange="validButtons(this);"<!-- ENDIF -->>
 			</td>
 		</tr>
 		<!-- END enabled -->
@@ -95,7 +95,7 @@
 				<!-- END actions -->
 			</td>
 			<td style="text-align: center;">
-				<input type="checkbox" name="ext_list[]" value="{disabled.NAME}">
+				<input type="checkbox" name="ext_list[]" value="{disabled.NAME}"<!-- IF disabled.EXT_ACTIONS --> ext-actions="{disabled.EXT_ACTIONS}" onchange="validButtons(this);"<!-- ENDIF -->>
 			</td>
 		</tr>
 		<!-- END disabled -->
@@ -106,15 +106,20 @@
 				<fieldset style="margin: 7px 0px 3px; padding: 7px 10px 3px; font-size: 1.2em;">
 					<legend>{L_IMP_EXTENSIONS_MULTI_ACTIONS}</legend>
 					<p style="float: right;">
-						<button class="button1" type="submit" name="action" value="enable_pre">{L_EXTENSION_ENABLE}</button>&nbsp;
-						<button class="button1" type="submit" name="action" value="disable_pre">{L_EXTENSION_DISABLE}</button>&nbsp;
-						<button class="button1" type="submit" name="action" value="delete_data_pre">{L_EXTENSION_DELETE_DATA}</button>
+						<button class="button1" id="button_enable" type="submit" name="action" disabled="disabled" value="enable_pre">{L_EXTENSION_ENABLE}</button>&nbsp;
+						<button class="button1" id="button_disable" type="submit" name="action" disabled="disabled" value="disable_pre">{L_EXTENSION_DISABLE}</button>&nbsp;
+						<button class="button1" id="button_delete_data" type="submit" name="action" disabled="disabled" value="delete_data_pre">{L_EXTENSION_DELETE_DATA}</button>
 					</p>
 					<p style="float: left;">
-						<button class="button2" type="reset" name="reset" value="{L_RESET}">{L_RESET}</button>
+						<button class="button2" type="reset" name="reset" value="{L_RESET}" onclick="markExtList(false); return false;">{L_RESET}</button>
 					</p>
 					<input type="hidden" name="multi" value="true" />
 					{S_FORM_TOKEN}
+					<p class="small" style="clear: both; float: right;">{L_MARK_ALL}{L_COLON}
+					<a href="#" onclick="markExtList('enable'); return false;">{L_EXTENSION_ENABLE}</a> &bull;
+					<a href="#" onclick="markExtList('disable'); return false;">{L_EXTENSION_DISABLE}</a> &bull;
+					<a href="#" onclick="markExtList('delete_data'); return false;">{L_EXTENSION_DELETE_DATA}</a>
+					</p>
 				</fieldset>
 			</td>
 		</tr>
@@ -143,5 +148,7 @@
 	</tr>
 	</tbody>
 	</table>
+
+<!-- INCLUDEJS js/multiaction.js -->
 
 <!-- INCLUDE overall_footer.html -->
