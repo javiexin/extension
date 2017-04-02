@@ -461,4 +461,37 @@ class manager extends \phpbb\extension\manager
 	{
 		return parent::version_check($this->get_extension_metadata_manager($ext_name), $force_update, $force_cache, $stability);
 	}
+
+	/**
+	* Check to see if a given extension is available for enablement
+	*
+	* @param string $name Extension name to check
+	* @return bool
+	*/
+	public function check_enableable($name)
+	{
+		return !$this->is_enabled($name) && $this->is_available($name);
+	}
+
+	/**
+	* Check to see if a given extension is available for disablement
+	*
+	* @param string $name Extension name to check
+	* @return bool
+	*/
+	public function check_disableable($name)
+	{
+		return $this->is_enabled($name);
+	}
+
+	/**
+	* Check to see if a given extension is available for purging
+	*
+	* @param string $name Extension name to check
+	* @return bool
+	*/
+	public function check_purgeable($name)
+	{
+		return $this->is_disabled($name);
+	}
 }

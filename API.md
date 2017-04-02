@@ -87,6 +87,38 @@ currently in phpBB is\_available and all\_available may give different results
 * All state methods are now fully consistent (all\_enabled, all\_disabled, all\_configured, all\_available now use is\_enabled, is\_disabled, is\_configured, 
 is\_available to generate the lists in a consistent way, no code replication)
 
+* **NEW 1.0.3**: Added methods to check if an action is doable in an extension (depending on its current state)
+
+```
+	/**
+	* Check to see if a given extension is available for enablement
+	*
+	* @param string $name Extension name to check
+	* @return bool
+	*/
+	public function check_enableable($name)
+```
+
+```
+	/**
+	* Check to see if a given extension is available for disablement
+	*
+	* @param string $name Extension name to check
+	* @return bool
+	*/
+	public function check_disableable($name)
+```
+
+```
+	/**
+	* Check to see if a given extension is available for purging
+	*
+	* @param string $name Extension name to check
+	* @return bool
+	*/
+	public function check_purgeable($name)
+```
+
 ## New Improved ACP Extension functionality
 
 The Improved ACP Extension module replaces phpBB's ACP Extension module.  This is done in a 100% compatible way, keeping exactly all the functionality.
@@ -94,7 +126,7 @@ The module now uses a launcher module plus a dedicated Admin Controller that imp
 
 * Compatible with 3.2.0, even though all the required events are not available, there is a workaround implemented, 
 asking the user for a redirection to the new module; if accepted, the new module will be used; if not, the old one will continue functioning
-* From 3.2.1 (expected), there will be additional core events that will allow for a full integration without the need of this redirect
+* From 3.2.1 (~~expected~~ already merged), there will be additional core events that will allow for a full integration without the need of this redirect
 * In both cases, an administrator may choose to use new module instead of the old one, but this is NOT forced from the extension
 * In the event that this extension is disabled from within itself (may happen), it is automatically redirected to the official one
 * The controller may be initialized either from the specific ACP module or from the event listener (3.2.1 onwards)
@@ -109,12 +141,15 @@ asking the user for a redirection to the new module; if accepted, the new module
 on single or multiple extensions, with significant code reduction and simplification
 * **NEW 1.0.1**: Include functionality to operate on multiple extensions at the same time (multi-enable, disable, delete\_data).
 Allows to select multiple extensions from the extension list, and execute an action on all of them.  Extensions are executed in order.
-No check is (yet) provided to allow only certain extensions for certain actions, but the right choice is validated before the action is executed.
-Limitation: the Improved Extension Mgr cannot be disabled together with any other.
+~~No check is (yet) provided to allow only certain extensions for certain actions, but~~ the right choice is validated before the action is executed.
+~~Limitation: the Improved Extension Mgr cannot be disabled together with any other.~~
 * **Update 1.0.2**: The Improved Extension Mgr may be disabled in a multi action; it is done last to avoid crash.
 Trying to use multi action on an empty list now triggers an error. Minor bug fixes.
+* **NEW 1.0.3**: Improve visuals and form behaviours in extension list for actions on multiple extensions:
+- alow selecting all extensions that support an specific action
+- enable only the multi-actions that are relevant for the selected extensions
+- out of the selected extensions, only those supporting an specific action are taken into consideration when executing multi-action
 
 ## Things to do (future functionality)
 
 * Include code to solve or mitigate [**[ticket/15009]** Inconsistency all\_configured all\_available](https://github.com/phpbb/phpbb/pull/4644)
-* Improve visuals and form behaviours in extension list for actions on multiple extensions
