@@ -131,7 +131,7 @@ class admin
 		}
 
 		// Get the list of extensions for multi actions; may set ext_name
-		$ext_list = $this->prepare_multi_action($ext_name);
+		$ext_list = $this->prepare_multi_action($action, $ext_name);
 
 		// As we are in control we do not want to interfere with event execution, so we remove our own subscriber
 		$this->dispatcher->removeSubscriber($this->listener);
@@ -197,12 +197,13 @@ class admin
 	}
 
 	/**
-	 * Prepare for multi action, reading the request parameters
-	 *
-	 * @param string	$ext_name	Reference to extension name, may be modified here
-	 * @return array				Extension list for multi actions
-	 */
-	public function prepare_multi_action(&$ext_name)
+	* Prepare for multi action, reading the request parameters
+	*
+	* @param string		$action		Action to perform
+	* @param string		$ext_name	Reference to extension name, may be modified here
+	* @return array					Extension list for multi actions
+	*/
+	public function prepare_multi_action($action, &$ext_name)
 	{
 		// Multi action from the form sets multi and ext_list as an array, from the url sets ext_list as a comma separated string
 		$ext_list = ($this->request->variable('multi', false)) ?
@@ -212,26 +213,44 @@ class admin
 		// List is empty
 		$ext_list = ($ext_list === array('')) ? array() : $ext_list;
 
+		$pre = (substr($action, -4) === '_pre');
+		$action = str_replace('_pre', '', $action);
+		$action_name = ($action == 'delete_data') ? 'purge' : $action;
+		$check_doable = 'check_' . $action_name . 'able';
+
+		// If we are preparing an action, we perform extra checks
+		if ($pre)
+		{
+			// Remove extensions that do not need this action
+			foreach ($ext_list as $key => $name)
+			{
+				if (!$this->ext_manager->$check_doable($name))
+				{
+					unset($ext_list[$key]);
+				}
+			}
+
+			// Do not allow actions without target extension(s)
+			if (empty($ext_name) && empty($ext_list))
+			{
+				trigger_error('FORM_INVALID', E_USER_WARNING);
+			}
+		}
+
 		// Multi action on a single extension, revert to normal action
 		if (count($ext_list) == 1)
 		{
-			$ext_name = $ext_list[0];
-			$ext_list = array();
-		}
-
-		// Do not allow actions without target extension(s)
-		if (in_array($action, array('enable_pre', 'disable_pre', 'delete_data_pre')) && empty($ext_name) && empty($ext_list))
-		{
-			trigger_error('FORM_INVALID', E_USER_WARNING);
+			$ext_name = array_shift($ext_list);
 		}
 
 		// If this extension has been specified for multi action, we make it last
-		if (in_array('javiexin/extension', $ext_list))
+		if (($key = array_search('javiexin/extension', $ext_list)) !== false)
 		{
-			$ext_list = array_values(array_merge(array_diff($ext_list, array('javiexin/extension')), array('javiexin/extension')));
+			unset($ext_list[$key]);
+			$ext_list[] = 'javiexin/extension';
 		}
 
-		return $ext_list;
+		return array_values($ext_list);
 	}
 
 	/**
@@ -547,6 +566,7 @@ class admin
 		{
 			$block_vars['NAME'] = $name;
 			$block_vars['U_DETAILS'] = $this->u_action . '&amp;action=details&amp;ext_name=' . urlencode($name);
+			$block_vars['EXT_ACTIONS'] = implode(' ', $actions);
 
 			$this->template->assign_block_vars($block, $block_vars);
 

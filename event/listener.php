@@ -61,7 +61,7 @@ class listener implements EventSubscriberInterface
 
 		$controller = $this->container->get('javiexin.extension.acp.controller');
 		// Get the list of extensions for multi actions; may set ext_name
-		$ext_list = $controller->prepare_multi_action($ext_name);
+		$ext_list = $controller->prepare_multi_action($event['action'], $ext_name);
 
 		$event['ext_name'] = $ext_name;
 		$event['ext_list'] = $ext_list;
