@@ -466,7 +466,7 @@ class manager extends \phpbb\extension\manager
 	* Check to see if a given extension is available for enablement
 	*
 	* @param string $name Extension name to check
-	* @return bool Depending on whether or not the extension is enableable
+	* @return bool
 	*/
 	public function check_enableable($name)
 	{
@@ -477,7 +477,7 @@ class manager extends \phpbb\extension\manager
 	* Check to see if a given extension is available for disablement
 	*
 	* @param string $name Extension name to check
-	* @return bool Depending on whether or not the extension is disableable
+	* @return bool
 	*/
 	public function check_disableable($name)
 	{
@@ -488,7 +488,7 @@ class manager extends \phpbb\extension\manager
 	* Check to see if a given extension is available for purging
 	*
 	* @param string $name Extension name to check
-	* @return bool Depending on whether or not the extension is enabled
+	* @return bool
 	*/
 	public function check_purgeable($name)
 	{
